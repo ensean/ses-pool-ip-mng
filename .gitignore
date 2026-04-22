@@ -1,0 +1,21 @@
+# Binary
+ses-ip-pool-mng
+
+# Go
+*.test
+*.out
+
+# Environment / credentials
+.env
+.env.*
+*.pem
+*.key
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
