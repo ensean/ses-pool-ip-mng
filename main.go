@@ -166,11 +166,14 @@ func identityRouter(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	if r.Method != http.MethodGet {
+	switch r.Method {
+	case http.MethodGet:
+		getIdentityConfigSet(w, r, parts[1])
+	case http.MethodPut:
+		setIdentityConfigSet(w, r, parts[1])
+	default:
 		writeError(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
 	}
-	getIdentityConfigSet(w, r, parts[1])
 }
 
 // GET /identities/{identity}/configset?region=us-east-1
@@ -192,6 +195,37 @@ func getIdentityConfigSet(w http.ResponseWriter, r *http.Request, identity strin
 		"identity":   identity,
 		"configset":  configSet,
 		"region":     effectiveRegion(c),
+	})
+}
+
+// PUT /identities/{identity}/configset
+// Body: {"configset": "my-config", "region": "us-east-1"}
+// Pass empty string for configset to detach the current default.
+func setIdentityConfigSet(w http.ResponseWriter, r *http.Request, identity string) {
+	var req struct {
+		ConfigSet string `json:"configset"`
+		Region    string `json:"region"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, `invalid body, expected {"configset":"name","region":"us-east-1"}`, http.StatusBadRequest)
+		return
+	}
+
+	c := sesClientFor(req.Region)
+	input := &sesv2.PutEmailIdentityConfigurationSetAttributesInput{
+		EmailIdentity: aws.String(identity),
+	}
+	if req.ConfigSet != "" {
+		input.ConfigurationSetName = aws.String(req.ConfigSet)
+	}
+	if _, err := c.PutEmailIdentityConfigurationSetAttributes(context.TODO(), input); err != nil {
+		writeError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, map[string]any{
+		"identity":  identity,
+		"configset": req.ConfigSet,
+		"region":    effectiveRegion(c),
 	})
 }
 

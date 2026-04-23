@@ -11,12 +11,13 @@
 | GET | `/pools/{name}/ips?region=` | 获取指定池中的 IP 列表 |
 | POST | `/pools/{name}/ips` | 将账户内已有的 dedicated IP 移入指定池 |
 | GET | `/identities/{identity}/configset?region=` | 查询指定 identity 绑定的默认配置集 |
+| PUT | `/identities/{identity}/configset` | 更新指定 identity 的默认配置集 |
 
 ## 环境要求
 
 - Go 1.24+
 - 有效的 AWS 凭证（见下方说明）
-- IAM 权限：`ses:ListDedicatedIpPools`、`ses:GetDedicatedIps`、`ses:GetConfigurationSet`、`ses:PutDedicatedIpInPool`、`ses:GetEmailIdentity`
+- IAM 权限：`ses:ListDedicatedIpPools`、`ses:GetDedicatedIps`、`ses:GetConfigurationSet`、`ses:PutDedicatedIpInPool`、`ses:GetEmailIdentity`、`ses:PutEmailIdentityConfigurationSetAttributes`
 
 ## AWS 凭证配置
 
@@ -182,6 +183,30 @@ curl "http://localhost:8080/identities/sender@example.com/configset?region=ap-ea
 ```
 
 若该 identity 未绑定配置集，`configset` 返回空字符串。
+
+### 更新 identity 的默认配置集
+
+```bash
+curl -X PUT http://localhost:8080/identities/example.com/configset \
+     -H 'Content-Type: application/json' \
+     -d '{"configset": "transactional-config", "region": "us-east-1"}'
+```
+
+```json
+{
+  "configset": "transactional-config",
+  "identity": "example.com",
+  "region": "us-east-1"
+}
+```
+
+`configset` 传空字符串可解绑当前配置集：
+
+```bash
+curl -X PUT http://localhost:8080/identities/example.com/configset \
+     -H 'Content-Type: application/json' \
+     -d '{"configset": "", "region": "us-east-1"}'
+```
 
 ## 错误响应格式
 
