@@ -10,12 +10,13 @@
 | GET | `/pools?region=&configset=` | 按 region / configset 过滤池名称 |
 | GET | `/pools/{name}/ips?region=` | 获取指定池中的 IP 列表 |
 | POST | `/pools/{name}/ips` | 将账户内已有的 dedicated IP 移入指定池 |
+| GET | `/identities/{identity}/configset?region=` | 查询指定 identity 绑定的默认配置集 |
 
 ## 环境要求
 
 - Go 1.24+
 - 有效的 AWS 凭证（见下方说明）
-- IAM 权限：`ses:ListDedicatedIpPools`、`ses:GetDedicatedIps`、`ses:GetConfigurationSet`、`ses:PutDedicatedIpInPool`
+- IAM 权限：`ses:ListDedicatedIpPools`、`ses:GetDedicatedIps`、`ses:GetConfigurationSet`、`ses:PutDedicatedIpInPool`、`ses:GetEmailIdentity`
 
 ## AWS 凭证配置
 
@@ -159,6 +160,28 @@ curl -X POST http://localhost:8080/pools/pool-transactional/ips \
 > **注意**：`POST /pools/{name}/ips` 调用的是 `PutDedicatedIpInPool`，
 > 作用是将账户内**已有的** dedicated IP 移至目标池，而非向 AWS 申请新 IP。
 > 如需申请额外的 dedicated IP，请通过 AWS 控制台或 Support 提交请求。
+
+### 查询 identity 的默认配置集
+
+```bash
+curl http://localhost:8080/identities/example.com/configset
+```
+
+```json
+{
+  "configset": "transactional-config",
+  "identity": "example.com",
+  "region": "us-east-1"
+}
+```
+
+支持邮箱地址或域名，可附加 `region` 参数：
+
+```bash
+curl "http://localhost:8080/identities/sender@example.com/configset?region=ap-east-1"
+```
+
+若该 identity 未绑定配置集，`configset` 返回空字符串。
 
 ## 错误响应格式
 

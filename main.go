@@ -36,8 +36,9 @@ func main() {
 	defaultClient = sesv2.NewFromConfig(baseCfg)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/pools", listPools)   // GET /pools
-	mux.HandleFunc("/pools/", poolRouter) // GET|POST /pools/{name}/ips
+	mux.HandleFunc("/pools", listPools)              // GET /pools
+	mux.HandleFunc("/pools/", poolRouter)            // GET|POST /pools/{name}/ips
+	mux.HandleFunc("/identities/", identityRouter)   // GET /identities/{identity}/configset
 
 	log.Println("Listening on :8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
@@ -155,6 +156,43 @@ func addIP(w http.ResponseWriter, r *http.Request, pool string) {
 
 	w.WriteHeader(http.StatusCreated)
 	writeJSON(w, map[string]any{"message": "IP moved to pool", "ip": req.IP, "pool": pool, "region": effectiveRegion(c)})
+}
+
+// Routes /identities/{identity}/configset
+func identityRouter(w http.ResponseWriter, r *http.Request) {
+	// expected path: /identities/{identity}/configset
+	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(parts) != 3 || parts[2] != "configset" {
+		http.NotFound(w, r)
+		return
+	}
+	if r.Method != http.MethodGet {
+		writeError(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	getIdentityConfigSet(w, r, parts[1])
+}
+
+// GET /identities/{identity}/configset?region=us-east-1
+// Returns the default configuration set bound to the given email identity.
+func getIdentityConfigSet(w http.ResponseWriter, r *http.Request, identity string) {
+	c := sesClientFor(r.URL.Query().Get("region"))
+	out, err := c.GetEmailIdentity(context.TODO(), &sesv2.GetEmailIdentityInput{
+		EmailIdentity: aws.String(identity),
+	})
+	if err != nil {
+		writeError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	var configSet string
+	if out.ConfigurationSetName != nil {
+		configSet = *out.ConfigurationSetName
+	}
+	writeJSON(w, map[string]any{
+		"identity":   identity,
+		"configset":  configSet,
+		"region":     effectiveRegion(c),
+	})
 }
 
 func writeJSON(w http.ResponseWriter, v any) {
