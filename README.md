@@ -10,6 +10,7 @@
 | GET | `/pools?region=&configset=` | 按 region / configset 过滤池名称 |
 | GET | `/pools/{name}/ips?region=` | 获取指定池中的 IP 列表 |
 | POST | `/pools/{name}/ips` | 将账户内已有的 dedicated IP 移入指定池 |
+| GET | `/configsets?region=` | 列出账户中所有配置集名称 |
 | GET | `/identities/{identity}/configset?region=` | 查询指定 identity 绑定的默认配置集 |
 | PUT | `/identities/{identity}/configset` | 更新指定 identity 的默认配置集 |
 
@@ -17,7 +18,7 @@
 
 - Go 1.24+
 - 有效的 AWS 凭证（见下方说明）
-- IAM 权限：`ses:ListDedicatedIpPools`、`ses:GetDedicatedIps`、`ses:GetConfigurationSet`、`ses:PutDedicatedIpInPool`、`ses:GetEmailIdentity`、`ses:PutEmailIdentityConfigurationSetAttributes`
+- IAM 权限：`ses:ListDedicatedIpPools`、`ses:GetDedicatedIps`、`ses:GetConfigurationSet`、`ses:PutDedicatedIpInPool`、`ses:GetEmailIdentity`、`ses:PutEmailIdentityConfigurationSetAttributes`、`ses:ListConfigurationSets`
 
 ## AWS 凭证配置
 
@@ -82,6 +83,25 @@ go run main.go
 指定端口（可在 main.go 中修改，或自行扩展为环境变量）。
 
 ## API 使用示例
+
+### 列出所有配置集
+
+```bash
+curl http://localhost:8080/configsets
+```
+
+```json
+{
+  "configsets": ["click-s", "mkt-config-set", "otp"],
+  "region": "ap-northeast-1"
+}
+```
+
+指定 region：
+
+```bash
+curl "http://localhost:8080/configsets?region=ap-southeast-1"
+```
 
 ### 获取所有 IP 池
 
@@ -215,3 +235,13 @@ curl -X PUT http://localhost:8080/identities/example.com/configset \
 ```json
 { "error": "错误描述" }
 ```
+
+## 参考资料
+
+- [ListDedicatedIpPools](https://docs.aws.amazon.com/ses/latest/APIReference-V2/API_ListDedicatedIpPools.html)
+- [GetDedicatedIps](https://docs.aws.amazon.com/ses/latest/APIReference-V2/API_GetDedicatedIps.html)
+- [PutDedicatedIpInPool](https://docs.aws.amazon.com/ses/latest/APIReference-V2/API_PutDedicatedIpInPool.html)
+- [ListConfigurationSets](https://docs.aws.amazon.com/ses/latest/APIReference-V2/API_ListConfigurationSets.html)
+- [GetConfigurationSet](https://docs.aws.amazon.com/ses/latest/APIReference-V2/API_GetConfigurationSet.html)
+- [GetEmailIdentity](https://docs.aws.amazon.com/ses/latest/APIReference-V2/API_GetEmailIdentity.html)
+- [PutEmailIdentityConfigurationSetAttributes](https://docs.aws.amazon.com/ses/latest/APIReference-V2/API_PutEmailIdentityConfigurationSetAttributes.html)
