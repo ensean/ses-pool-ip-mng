@@ -38,7 +38,8 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/pools", listPools)              // GET /pools
 	mux.HandleFunc("/pools/", poolRouter)            // GET|POST /pools/{name}/ips
-	mux.HandleFunc("/identities/", identityRouter)   // GET /identities/{identity}/configset
+	mux.HandleFunc("/identities/", identityRouter)   // GET|PUT /identities/{identity}/configset
+	mux.HandleFunc("/configsets", listConfigSets)    // GET /configsets
 
 	log.Println("Listening on :8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
@@ -156,6 +157,27 @@ func addIP(w http.ResponseWriter, r *http.Request, pool string) {
 
 	w.WriteHeader(http.StatusCreated)
 	writeJSON(w, map[string]any{"message": "IP moved to pool", "ip": req.IP, "pool": pool, "region": effectiveRegion(c)})
+}
+
+// GET /configsets?region=us-east-1
+// Returns all configuration set names in the region, handling pagination automatically.
+func listConfigSets(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	c := sesClientFor(r.URL.Query().Get("region"))
+	paginator := sesv2.NewListConfigurationSetsPaginator(c, &sesv2.ListConfigurationSetsInput{})
+	all := []string{}
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(context.TODO())
+		if err != nil {
+			writeError(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		all = append(all, page.ConfigurationSets...)
+	}
+	writeJSON(w, map[string]any{"configsets": all, "region": effectiveRegion(c)})
 }
 
 // Routes /identities/{identity}/configset
